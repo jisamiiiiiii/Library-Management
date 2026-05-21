@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
 return redirect('/products');
 });
+
 // --- GUEST ACCESSIBLE ROUTES ---
 Route::get('/', function () {
     return redirect()->route('login');
