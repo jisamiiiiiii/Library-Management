@@ -136,11 +136,7 @@
                                         </button>
                                     @endif
                                 @else
-                                    {{-- Admin View: Simply show status --}}
-                                    <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-2xl">
-                                        <p class="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Management Mode</p>
-                                        <p class="text-xs text-indigo-500 font-bold">Use the buttons above to modify this record.</p>
-                                    </div>
+                                    
                                 @endif
                             </div>
 
