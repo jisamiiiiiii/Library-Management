@@ -4,71 +4,68 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BookController; 
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\BorrowController; 
-use App\Models\Book;      
-use App\Models\User;  
-use App\Models\Category;  
-use App\Models\Borrow; 
+use App\Http\Controllers\DashboardController; // Added this
 use Illuminate\Support\Facades\Route;
 
+
+Route::get('/', function () {
+return redirect('/products');
+});
 // --- GUEST ACCESSIBLE ROUTES ---
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
 
-
+// Accessible by everyone (Guest and Auth)
 Route::get('/books', [BookController::class, 'index'])->name('books.index');
 
 // --- DASHBOARD ROUTE ---
-Route::get('/dashboard', function () {
-    $stats = [
-        'total_books'      => Book::count(),
-        'total_users'      => User::where('role', 'Student')->count(), 
-        'categories'       => Category::count(),                      
-        'available'        => Book::where('status', 'available')->count(), 
-        'pending_requests' => Borrow::where('status', 'pending')->count(), 
-    ];
-
-    return view('dashboard', compact('stats'));
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Professional Logic: Logic moved to DashboardController@index
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 // --- SHARED AUTHENTICATED ROUTES ---
 Route::middleware('auth')->group(function () {
+    // Profile Management
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     /**
-     * Module 4: Student View
+     * Module: Borrowing System (Student & Staff Shared)
+     * Logic: index() handles role-based filtering automatically.
      */
-    Route::get('/my-borrows', [BorrowController::class, 'index'])->name('borrows.index');
-    Route::post('/borrows', [BorrowController::class, 'store'])->name('borrows.store'); 
+    Route::get('/borrows', [BorrowController::class, 'index'])->name('borrows.index');
+    
+    // Requesting a book (Student Action)
+    Route::post('/borrows/store', [BorrowController::class, 'store'])->name('borrows.store'); 
 });
 
 // --- LIBRARIAN & STAFF CONTROL ---
 Route::middleware(['auth'])->group(function () {
     
     /**
-     * Module 2: Book Management
+     * Module: Book Management
+     * Logic: Full CRUD for books (Admin side)
      */
     Route::resource('books', BookController::class)->except(['index']);
 
     /**
-     * Module 4: Admin/Librarian Borrow Management
-     * UPDATED: Name changed to admin.borrows.index to fix the 500 error
+     * Module: Borrow Management (Administrative Actions)
+     * Logic: These trigger the date-logging we just set up.
      */
-    Route::get('/admin/borrows', [BorrowController::class, 'allBorrows'])
-        ->name('admin.borrows.index'); 
     
-    // We keep this as an alias just in case other parts of your UI use it
-    Route::get('/admin/borrows-list', [BorrowController::class, 'allBorrows'])
-        ->name('admin.borrows'); 
+    // Logic: Librarian approves hand-off (sets borrow_date)
+    Route::patch('/borrows/{borrow}/approve', [BorrowController::class, 'update'])->name('borrows.update');
     
-    Route::patch('/borrows/{borrow}', [BorrowController::class, 'update'])->name('borrows.update');
+    // Logic: Librarian processes return (sets returned_at)
     Route::patch('/borrows/{borrow}/return', [BorrowController::class, 'returnBook'])->name('borrows.return');
-});
-
-// --- ADMIN-ONLY (USER MANAGEMENT) ---
-Route::middleware(['auth'])->group(function () {
+    
+    /**
+     * Module: User & Account Management
+     * Logic: Manage Staff and Students
+     */
     Route::resource('users', UserController::class);
 });
 

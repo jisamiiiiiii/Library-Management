@@ -6,35 +6,35 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-   
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->id(); // user_id (PK)
+            $table->id(); 
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
 
-    
-            $table->enum('role', ['Admin', 'Librarian', 'Student'])->default('Student');
+            // --- ADDED COLUMNS TO FIX YOUR DIRECTORY ---
+            $table->string('department')->nullable();    // Academic Dept.
+            $table->string('year_level')->nullable();    // Student Year (Indigo text)
+            $table->string('contact_number')->nullable(); // Contact Info
             
-          
-            $table->enum('status', ['active', 'inactive'])->default('active');
-            // -----------------------------
+            // Standardizing Case: 'Active' instead of 'active' to match your Seeder
+            $table->enum('role', ['Admin', 'Librarian', 'Student'])->default('Student');
+            $table->enum('status', ['Active', 'Inactive'])->default('Active');
+            // --------------------------------------------
 
             $table->rememberToken();
             $table->timestamps();
         });
 
-     
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-   
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
@@ -45,7 +45,6 @@ return new class extends Migration
         });
     }
 
-    
     public function down(): void
     {
         Schema::dropIfExists('users');

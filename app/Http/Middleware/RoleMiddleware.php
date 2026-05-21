@@ -17,7 +17,7 @@ class RoleMiddleware
             return redirect('login');
         }
 
-      
+
         if ($request->user()->role !== $role) {
             
             return redirect('/dashboard')->with('error', 'Access Denied: You do not have ' . $role . ' privileges.');

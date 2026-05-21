@@ -41,8 +41,8 @@
                             </svg>
                         </span>
                         <input type="text" name="search" value="{{ request('search') }}" 
-                            placeholder="Search by Name, Email, or Role..." 
-                            class="block w-full pl-14 pr-6 py-4 border border-white/40 rounded-2xl bg-white/60 backdrop-blur-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700 shadow-xl shadow-indigo-100/20 transition-all placeholder-gray-400 border">
+                            placeholder="Search by Name, Email, or Department..." 
+                            class="block w-full pl-14 pr-6 py-4 border border-white/40 rounded-2xl bg-white/60 backdrop-blur-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-700 shadow-xl shadow-indigo-100/20 transition-all placeholder-gray-400">
                     </div>
                     
                     <div class="flex gap-2">
@@ -97,7 +97,8 @@
                             <tr class="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] border-b border-gray-50">
                                 <th class="pb-6">Type</th>
                                 <th class="pb-6">Identity</th>
-                                <th class="pb-6">Access Level</th>
+                                <th class="pb-6">Academic Dept.</th>
+                                <th class="pb-6">Contact</th>
                                 <th class="pb-6">Status</th>
                                 <th class="pb-6 text-right">Actions</th>
                             </tr>
@@ -133,18 +134,21 @@
                                     <div class="text-[11px] text-gray-400 mt-1.5 font-medium italic">{{ $user->email }}</div>
                                 </td>
 
+                                {{-- NEW: Academic Column --}}
                                 <td class="py-7">
-                                    @php
-                                        $roleStyles = [
-                                            'admin' => 'bg-purple-50 text-purple-600 border-purple-100',
-                                            'librarian' => 'bg-blue-50 text-blue-600 border-blue-100',
-                                            'student' => 'bg-indigo-50 text-indigo-600 border-indigo-100',
-                                        ];
-                                        $badgeStyle = $roleStyles[$cleanRole] ?? 'bg-gray-50 text-gray-500 border-gray-100';
-                                    @endphp
-                                    <span class="px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter border {{ $badgeStyle }}">
-                                        {{ $rawRole }}
-                                    </span>
+                                    @if($cleanRole == 'student')
+                                        <div class="text-sm font-bold text-gray-800">{{ $user->department ?? 'General' }}</div>
+                                        <div class="text-[10px] font-black text-indigo-500 uppercase tracking-tight">{{ $user->year_level ?? 'N/A' }}</div>
+                                    @else
+                                        <span class="text-[10px] font-bold text-gray-300 uppercase tracking-widest italic">Academic Staff</span>
+                                    @endif
+                                </td>
+
+                                {{-- NEW: Contact Column --}}
+                                <td class="py-7">
+                                    <div class="text-[12px] font-mono font-bold text-gray-600">
+                                        {{ $user->contact_number ?? '---' }}
+                                    </div>
                                 </td>
 
                                 <td class="py-7">
@@ -156,7 +160,6 @@
 
                                 <td class="py-7 text-right">
                                     <div class="flex justify-end items-center gap-5">
-                                        {{-- FIXED LINK: Added route and click stop --}}
                                         <a href="{{ route('users.edit', $user->id) }}" 
                                            @click.stop
                                            class="relative z-10 text-[#5d5bf4] hover:text-indigo-800 text-[11px] font-black uppercase tracking-widest transition leading-none border-b border-transparent hover:border-indigo-800">
@@ -175,7 +178,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="py-24 text-center text-gray-400 italic font-medium">
+                                <td colspan="6" class="py-24 text-center text-gray-400 italic font-medium">
                                     No records found in the directory.
                                 </td>
                             </tr>
@@ -183,6 +186,13 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- Pagination Links --}}
+                @if($users instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                    <div class="px-12 pb-10">
+                        {{ $users->links() }}
+                    </div>
+                @endif
             </div>
         </div>
     </div>

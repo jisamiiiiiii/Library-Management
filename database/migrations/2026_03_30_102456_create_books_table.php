@@ -9,21 +9,18 @@ return new class extends Migration
 
     public function up(): void
     {
-        Schema::create('books', function (Blueprint $table) {
-            $table->id(); 
-            
-
-            $table->string('title');
-            $table->string('author');
-            $table->string('isbn')->unique(); 
-            
-
-            $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
-            
-            $table->enum('status', ['available', 'borrowed', 'lost'])->default('available');
-            // ----------------------------------
-            
-            $table->timestamps();
+       Schema::create('books', function (Blueprint $table) {
+    $table->id();
+    $table->string('title');
+    $table->string('author');
+    $table->string('isbn')->unique();
+    $table->foreignId('category_id')->constrained()->onDelete('cascade');
+    $table->string('status')->default('available');
+    $table->string('department');
+    $table->text('summary')->nullable(); // <-- MAKE SURE THIS LINE EXISTS
+    $table->string('location')->nullable();
+    $table->string('cover_image')->nullable();
+    $table->timestamps();
         });
     }
 

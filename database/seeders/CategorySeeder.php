@@ -2,14 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Category;
 use Illuminate\Database\Seeder;
+use App\Models\Category;
 
 class CategorySeeder extends Seeder
 {
-    /**
-     * Seed the categories table.
-     */
     public function run(): void
     {
         $categories = [
@@ -18,10 +15,11 @@ class CategorySeeder extends Seeder
             ['category_name' => 'Fiction'],
             ['category_name' => 'History'],
             ['category_name' => 'General Reference'],
+            ['category_name' => 'Non-Fiction'], 
         ];
 
-        foreach ($categories as $category) {
-            Category::create($category);
+        foreach ($categories as $cat) {
+            Category::updateOrCreate(['category_name' => $cat['category_name']], $cat);
         }
     }
 }

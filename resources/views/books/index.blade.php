@@ -8,6 +8,7 @@
     <div class="py-12 bg-gradient-to-tr from-indigo-100 via-white to-blue-100 min-h-screen">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
+            {{-- Notifications --}}
             <div class="mb-6">
                 @if(session('success'))
                     <div 
@@ -61,8 +62,14 @@
                 @endif
             </div>
 
-            <div class="mb-8 px-2">
+            {{-- Search and Quick Filters --}}
+            <div class="mb-8 px-2 space-y-4">
                 <form action="{{ route('books.index') }}" method="GET" class="flex flex-col md:flex-row gap-3">
+                    {{-- Keep category filter active even when searching --}}
+                    @if(request('category'))
+                        <input type="hidden" name="category" value="{{ request('category') }}">
+                    @endif
+
                     <div class="relative flex-grow group">
                         <span class="absolute inset-y-0 left-0 flex items-center pl-4">
                             <svg class="w-5 h-5 text-indigo-500 group-focus-within:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -77,13 +84,30 @@
                         <button type="submit" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-lg transition-all transform hover:scale-105 active:scale-95">
                             Search
                         </button>
-                        @if(request('search'))
-                            <a href="{{ route('books.index') }}" class="px-6 py-4 bg-white/80 hover:bg-white text-gray-600 font-bold rounded-2xl shadow-md border border-gray-200 transition-all text-center">
+                        @if(request('search') || (request('category') && request('category') != 'All'))
+                            <a href="{{ route('books.index') }}" class="px-6 py-4 bg-white/80 hover:bg-white text-gray-600 font-bold rounded-2xl shadow-md border border-gray-200 transition-all text-center flex items-center justify-center">
                                 Clear
                             </a>
                         @endif
                     </div>
                 </form>
+
+                {{-- Optimized Category Quick-Filters --}}
+                <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    <span class="text-[10px] font-black uppercase text-indigo-400 tracking-widest mr-2">Quick Filter:</span>
+                    
+                    <a href="{{ route('books.index', ['search' => request('search')]) }}" 
+                       class="whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all {{ !request('category') || request('category') == 'All' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/60 text-gray-600 hover:bg-white' }}">
+                       All
+                    </a>
+
+                    @foreach($categories as $category)
+                        <a href="{{ route('books.index', ['category' => $category->id, 'search' => request('search')]) }}" 
+                           class="whitespace-nowrap px-4 py-2 rounded-xl text-xs font-bold transition-all {{ request('category') == $category->id ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white/60 text-gray-600 hover:bg-white border border-white/40' }}">
+                            {{ $category->category_name }}
+                        </a>
+                    @endforeach
+                </div>
             </div>
 
             <div class="bg-white/40 backdrop-blur-lg border border-white/40 shadow-2xl rounded-[2.5rem] overflow-hidden p-4 md:p-8">
@@ -91,84 +115,141 @@
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 px-2">
                     <div>
                         <h3 class="text-3xl font-black text-gray-900 tracking-tighter">Books Collection</h3>
-                        <p class="text-sm font-medium text-gray-500">
-                            @if(request('search'))
-                                Found {{ $books->count() }} results for "<span class="text-indigo-600 font-bold">{{ request('search') }}</span>"
-                            @else
-                                Managing {{ $books->count() }} books in total
-                            @endif
-                        </p>
+                        <div class="flex items-center gap-3 mt-1">
+                            <p class="text-sm font-medium text-gray-500">
+                                @if(request('search'))
+                                    Found {{ $books->total() }} results for "<span class="text-indigo-600 font-bold">{{ request('search') }}</span>"
+                                @else
+                                    Managing {{ $books->total() }} books in total
+                                @endif
+                            </p>
+                            @auth
+                                @if(Auth::user()->role === 'Student')
+                                    @php $borrowCount = Auth::user()->borrows()->whereIn('status', ['pending', 'borrowed'])->count(); @endphp
+                                    <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-[10px] font-bold">
+                                        Your Borrows: {{ $borrowCount }}/4
+                                    </span>
+                                @endif
+                            @endauth
+                        </div>
                     </div>
                     
                     @auth
                         @if(in_array(Auth::user()->role, ['Admin', 'Librarian'])) 
-                            <a href="{{ route('books.create') }}" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105">
-                                + Add New Book
+                            <a href="{{ route('books.create') }}" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition-all transform hover:scale-105 flex items-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                                Add New Book
                             </a>
                         @endif
                     @endauth
                 </div>
 
-                <div class="overflow-x-auto rounded-[2rem] border border-white/60 bg-white/20">
+                <div class="overflow-x-auto rounded-[2rem] border border-white/60 bg-white/20 shadow-inner">
                     <table class="min-w-full divide-y divide-gray-200/50">
                         <thead>
                             <tr class="bg-white/50 text-left">
-                                <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">ISBN</th>
+                                <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Cover</th>
                                 <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Book Title</th>
+                                <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">ISBN</th>
                                 <th class="px-6 py-5 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Category</th>
                                 <th class="px-6 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Status</th>
-                                @if(Auth::user()->role !== 'Student')
-                                    <th class="px-6 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Actions</th>
-                                @endif
+                                <th class="px-6 py-5 text-center text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100/50">
                             @forelse ($books as $book)
                                 <tr class="hover:bg-white/60 transition-all group">
-                                    <td class="px-6 py-4 text-sm font-mono text-gray-500 uppercase">{{ $book->isbn }}</td>
                                     <td class="px-6 py-4">
-                                        <div class="text-sm font-bold text-gray-900">{{ $book->title }}</div>
+                                        <div class="w-14 h-20 rounded-lg overflow-hidden shadow-md border border-gray-100 bg-gray-50 flex-shrink-0 group-hover:scale-105 transition-transform duration-300">
+                                            @if($book->cover_image)
+                                                <img src="{{ asset('storage/' . $book->cover_image) }}" 
+                                                     alt="{{ $book->title }}" 
+                                                     loading="lazy"
+                                                     class="w-full h-full object-cover">
+                                            @else
+                                                <div class="w-full h-full flex items-center justify-center bg-indigo-50">
+                                                    <svg class="w-6 h-6 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </td>
+
+                                    <td class="px-6 py-4">
+                                        <div class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{{ $book->title }}</div>
                                         <div class="text-xs text-gray-500 font-medium italic">{{ $book->author }}</div>
                                     </td>
+
+                                    <td class="px-6 py-4 text-sm font-mono text-gray-500 uppercase">{{ $book->isbn }}</td>
+
                                     <td class="px-6 py-4">
-                                        <span class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase border border-indigo-100">
+                                        <span class="px-3 py-1 bg-white/50 text-indigo-600 rounded-full text-[10px] font-black uppercase border border-indigo-100 shadow-sm">
                                             {{ $book->category->category_name ?? 'N/A' }}
                                         </span>
                                     </td>
+
                                     <td class="px-6 py-4 text-center">
-                                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase {{ $book->status == 'available' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200' }}">
+                                        <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase 
+                                            {{ $book->status == 'available' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-red-100 text-red-700 border border-red-200' }}">
                                             {{ $book->status }}
                                         </span>
                                     </td>
-                                    @if(Auth::user()->role !== 'Student')
-                                        <td class="px-6 py-4 text-center"> 
-                                            <div class="flex justify-center items-center space-x-2">
+                                    
+                                    <td class="px-6 py-4 text-center"> 
+                                        <div class="flex justify-center items-center space-x-2">
+                                            <a href="{{ route('books.show', $book->id) }}" class="p-2 bg-white text-gray-400 rounded-lg border border-gray-200 hover:text-indigo-600 hover:border-indigo-600 transition-all shadow-sm" title="View Details">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                            </a>
+
+                                            @auth
                                                 @if(in_array(Auth::user()->role, ['Admin', 'Librarian']))
-                                                    <a href="{{ route('books.edit', $book->id) }}" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                                    <a href="{{ route('books.edit', $book->id) }}" class="p-2 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Edit">
                                                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                                                     </a>
                                                     @if(Auth::user()->role === 'Admin')
                                                         <form action="{{ route('books.destroy', $book->id) }}" method="POST" class="inline">
                                                             @csrf @method('DELETE')
-                                                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" onclick="return confirm('Delete this book permanently?')">
+                                                            <button type="submit" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-600 hover:text-white transition-all shadow-sm" onclick="return confirm('Delete this book permanently?')" title="Delete">
                                                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                                                             </button>
                                                         </form>
                                                     @endif
+
+                                                @elseif(Auth::user()->role === 'Student')
+                                                    @if($book->status === 'available')
+                                                        @if($borrowCount < 4)
+                                                            <form action="{{ route('borrows.store') }}" method="POST">
+                                                                @csrf
+                                                                <input type="hidden" name="book_id" value="{{ $book->id }}">
+                                                                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all transform hover:scale-105 active:scale-95">
+                                                                    Borrow Now
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <span class="text-[10px] font-black text-red-500 uppercase px-3 py-1 bg-red-50 rounded-lg border border-red-100">
+                                                                Limit Reached
+                                                            </span>
+                                                        @endif
+                                                    @else
+                                                        <span class="text-[10px] font-black text-gray-400 uppercase">
+                                                            Unavailable
+                                                        </span>
+                                                    @endif
                                                 @endif
-                                            </div>
-                                        </td>
-                                    @endif
+                                            @endauth
+                                        </div>
+                                    </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ Auth::user()->role === 'Student' ? 4 : 5 }}" class="px-6 py-20 text-center">
+                                    <td colspan="6" class="px-6 py-20 text-center">
                                         <div class="flex flex-col items-center">
                                             <div class="p-4 bg-gray-50 rounded-full mb-4">
                                                 <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18 18.247 18.477 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                                             </div>
-                                            <p class="text-gray-400 font-medium">No matches found.</p>
-                                            <a href="{{ route('books.index') }}" class="text-indigo-600 font-bold text-sm mt-2 hover:underline">Show all books</a>
+                                            <p class="text-gray-400 font-medium">No books found in this section.</p>
+                                            <a href="{{ route('books.index') }}" class="text-indigo-600 font-bold text-sm mt-2 hover:underline">Reset Filters</a>
                                         </div>
                                     </td>
                                 </tr>
@@ -176,7 +257,18 @@
                         </tbody>
                     </table>
                 </div>
+
+                {{-- PAGINATION LINKS --}}
+                <div class="mt-8 px-2">
+                    {{ $books->appends(request()->query())->links() }}
+                </div>
             </div>
         </div>
     </div>
+    
+    <style>
+        /* Custom scrollbar for category filter */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
 </x-app-layout>

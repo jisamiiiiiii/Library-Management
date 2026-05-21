@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Carbon\Carbon;
 
 class Borrow extends Model
 {
@@ -13,27 +14,39 @@ class Borrow extends Model
     protected $fillable = [
         'user_id',
         'book_id',
-        'borrowed_date',
+        'status',      // pending, borrowed, returned
         'due_date',
-        'return_date',
-        'status'
+        'returned_at', 
     ];
-
 
     protected $casts = [
-        'borrowed_date' => 'datetime',
         'due_date'      => 'datetime',
-        'return_date'   => 'datetime',
+        'returned_at'   => 'datetime',
     ];
 
-   
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function book(): BelongsTo
     {
         return $this->belongsTo(Book::class);
+    }
+
+    public function isOverdue(): bool
+    {
+        if ($this->status === 'borrowed' && $this->due_date) {
+            return Carbon::now()->greaterThan($this->due_date);
+        }
+        return false;
+    }
+
+    public function daysRemaining(): int
+    {
+        if ($this->status === 'borrowed' && $this->due_date) {
+            return (int) Carbon::now()->diffInDays($this->due_date, false);
+        }
+        return 0;
     }
 }
